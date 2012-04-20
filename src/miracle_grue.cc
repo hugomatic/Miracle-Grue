@@ -20,6 +20,7 @@
 #include "mgl/miracle.h"
 
 #include "mgl/Vector2.h"
+#include "clpp/parser.hpp"
 
 using namespace std;
 using namespace mgl;
@@ -39,6 +40,34 @@ double doubleFromCharEqualsStr(const std::string& str)
 	return val;
 }
 
+class ConfigSetter {
+public:
+	ConfigSetter(Configuration &c, const string &s, const string &n):
+		config(c), section(s), name(n) {};
+	void set_s(string &val) {
+		config[section.c_str()][name.c_str()] = val;
+		cout << section + "." + name + " = " + val << endl;
+	};
+	void set_d(float &val) {
+		config[section.c_str()][name.c_str()] = val;
+		cout << section + "." + name + " = ";
+		cout << val << endl;
+	};
+	void set_i(int &val) {
+		config[section.c_str()][name.c_str()] = val;
+		cout << section + "." + name + " = ";
+		cout << val << endl;
+	};
+	void set_b() {
+		config[section.c_str()][name.c_str()] = true;
+		cout << section + "." + name + " = true" << endl;
+	};
+private:
+	Configuration &config;
+	const string &section;
+	const string &name;
+};
+
 void parseArgs(Configuration &config,
 				int argc,
 				char *argv[],
@@ -50,66 +79,47 @@ void parseArgs(Configuration &config,
 	firstSliceIdx = -1;
 	lastSliceIdx = -1;
 
-	modelFile = argv[argc-1];
-    for(int i = 1;i < argc - 1;i++){
-        string str = argv[i];
-        // cout << i << " " << str << endl;
-        if(str.find("f=") != string::npos)
-        {
-        	config["slicer"]["firstLayerZ"]  = doubleFromCharEqualsStr(str);
-        	cout << "sliceer.firstLayerZ = " << config["slicer"]["firstLayerZ"].asDouble() << endl;
-        }
+	//first get the config parameter and parse the file so that other params can override the
+	//config
+	clpp::command_line_parameters_parser configparser;
+	configparser.add_parameter("-c", "--config", &config, &Configuration::readFromFile)
+			.default_value("miracle.config").necessary();
+	configparser.parse(argc, argv);
 
-        if(str.find("l=") != string::npos)
-        {
-        	config["slicer"]["layerH"] = doubleFromCharEqualsStr(str);
-        	cout << "sliceer.layerH = " << config["slicer"]["layerH"].asDouble() << endl;
-        }
 
-        if(str.find("w=") != string::npos)
-        {
-        	config["slicer"]["layerW"] = doubleFromCharEqualsStr(str);
-        	cout << "slicer.layerW = " << config["slicer"]["layerW"].asDouble() << endl;
-        }
+	//get the rest of the parameters
+	clpp::command_line_parameters_parser parser;
 
-        if(str.find("t=") != string::npos)
-        {
-        	config["slicer"]["tubeSpacing"] = doubleFromCharEqualsStr(str);
-        	cout << "sliceer.tubeSpacing = " << config["slicer"]["tubeSpacing"].asDouble() << endl;
-        }
+	ConfigSetter f(config, "slicer", "firstLayerZ");
+	parser.add_parameter("-f", "--firstLayerZ", &f, &ConfigSetter::set_d);
 
-        if(str.find("a=") != string::npos)
-        {
-        	config["slicer"]["angle"] = doubleFromCharEqualsStr(str);
-        	cout << "slicer.angle = " << config["slicer"]["angle"].asDouble() << endl;
+	ConfigSetter l(config, "slicer", "layerH");
+	parser.add_parameter("-l", "--layerH", &l, &ConfigSetter::set_d);
 
-        }
+	ConfigSetter w(config, "slicer", "layerW");
+	parser.add_parameter("-w", "--layerW", &w, &ConfigSetter::set_d);
 
-        if(str.find("s=") != string::npos)
-        {
-        	config["slicer"]["nbOfShells"] = doubleFromCharEqualsStr(str);
-        	cout << "slicer.nbOfShells = " << config["slicer"]["nbOfShells"].asDouble() << endl;
+	ConfigSetter t(config, "slicer", "tubeSpacing");
+	parser.add_parameter("-t", "--tubeSpacing", &t, &ConfigSetter::set_d);
 
-        }
+	ConfigSetter a(config, "slicer", "angle");
+	parser.add_parameter("-a", "--angle", &a, &ConfigSetter::set_d);
 
-        if(str.find("-d") != string::npos)
-        {
-        	config["slicer"]["writeDebugScadFiles"] = true;
-        	cout << "slicer.writeDebugScadFiles = " << config["slicer"]["angle"].asBool() << endl;
-        }
+	ConfigSetter s(config, "slicer", "nbOfShells");
+	parser.add_parameter("-s", "--nbOfShells", &s, &ConfigSetter::set_d);
 
-        if(str.find("n=") != string::npos)
-        {
-        	firstSliceIdx = intFromCharEqualsStr(str);
-        	cout << "first slice = " << firstSliceIdx << endl;
-        }
+	ConfigSetter d(config, "slicer", "writeDebugScadFiles");
+	parser.add_parameter("-d", "--writeDebugScadFiles", &d, &ConfigSetter::set_b);
 
-        if(str.find("m=") != string::npos)
-        {
-        	lastSliceIdx = intFromCharEqualsStr(str);
-        	cout << "last slice = " << lastSliceIdx << endl;
-        }
-    }
+	ConfigSetter n(config, "slicer", "firstSliceIdx");
+	parser.add_parameter("-n", "--firstSliceIdx", &n, &ConfigSetter::set_i);
+
+	firstSliceIdx = config["slicer"]["firstSliceIdx"].asInt();
+
+	ConfigSetter m(config, "slicer", "lastSliceIdx");
+	parser.add_parameter("-m", "--lastSliceIdx", &m, &ConfigSetter::set_i);
+
+	lastSliceIdx = config["slicer"]["lastSliceIdx"].asInt();
 }
 
 
@@ -164,19 +174,10 @@ int main(int argc, char *argv[], char *envp[])
 	string modelFile;
 	string configFileName = "miracle.config";
 
-	for(int i = 1;i < argc - 1;i++)
-    {
-        string str = argv[i];
-        if(str.find("c=") != string::npos)
-        {
-        	configFileName = str.substr(2, str.length()-2);
-        }
-    }
-
     Configuration config;
     try
     {
-		cout << "Configuration file: " << configFileName << endl;
+
 		config.readFromFile(configFileName.c_str());
 
 		int firstSliceIdx, lastSliceIdx;
