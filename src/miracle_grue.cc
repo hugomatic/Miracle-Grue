@@ -15,6 +15,8 @@
 #include <string>
 
 #include <stdlib.h>
+#include <boost/filesystem.hpp>
+
 #include "mgl/abstractable.h"
 #include "mgl/configuration.h"
 #include "mgl/miracle.h"
@@ -41,32 +43,84 @@ double doubleFromCharEqualsStr(const std::string& str)
 }
 
 class ConfigSetter {
+	typedef enum {NONE, INT, STR, DBL, BOOL} configtype;
 public:
 	ConfigSetter(Configuration &c, const string &s, const string &n):
-		config(c), section(s), name(n) {};
-	void set_s(string &val) {
-		config[section.c_str()][name.c_str()] = val;
-		cout << section + "." + name + " = " + val << endl;
+		config(c), section(s), name(n), set(NONE) {};
+	void set_s(const string val) {
+		sval = val;
+		set = STR;
 	};
-	void set_d(float val) {
-		config[section.c_str()][name.c_str()] = val;
-		cout << section + "." + name + " = ";
-		cout << val << endl;
+	void set_d(const double val) {
+		dval = val;
+		set = DBL;
 	};
-	void set_i(int val) {
-		config[section.c_str()][name.c_str()] = val;
-		cout << section + "." + name + " = ";
-		cout << val << endl;
+	void set_i(const int val) {
+		ival = val;
+		set = INT;
 	};
 	void set_b() {
-		config[section.c_str()][name.c_str()] = true;
-		cout << section + "." + name + " = true" << endl;
+		set = BOOL;
+	};
+	~ConfigSetter() {
+		if (set == NONE)
+			return;
+
+		cout << section + "." + name + " = ";
+
+		if (set == INT) {
+			config[section.c_str()][name.c_str()] = ival;
+			cout << ival << endl;
+		}
+		else if (set == DBL) {
+			config[section.c_str()][name.c_str()] = dval;
+			cout << dval << endl;
+		}
+		else if (set == STR) {
+			config[section.c_str()][name.c_str()] = sval;
+			cout << sval << endl;
+		}
+		else if (set == BOOL) {
+			config[section.c_str()][name.c_str()] = true;
+			cout << "true"<< endl;
+		}
 	};
 private:
 	Configuration &config;
 	const string &section;
 	const string &name;
+	configtype set;
+	string sval;
+	double dval;
+	int ival;
 };
+
+void usage() {
+	cout << endl;
+	cout << endl;
+	cout << "This program translates a 3d model file in STL format to GCODE toolpath for a 3D printer "<< endl;
+	cout << "It also generates an OpenScad file for visualization"<< endl;
+	cout << endl;
+	cout << "usage: miracle-grue [OPTIONS] STL FILE" << endl;
+	cout << "options: " << endl;
+	cout << "  -c --config        : set the configuration file (default is local miracle.config)" << endl;
+	cout << "  -f --firstLayerZ   : override the first layer height" << endl;
+	cout << "  -l --layerH        : override the layer height" << endl;
+	cout << "  -w --layerW        : override layer width" << endl;
+	cout << "  -t --tubeSpacing   : override the infill grid width" << endl;
+	cout << "  -a --angle         : override the infill grid inter slice angle (radians)" << endl;
+	cout << "  -s --nbOfShells    : override the number of shells" << endl;
+	cout << "  -n --firstSliceIdx : slice from a specific slice" << endl;
+	cout << "  -m --lastSliceIdx  : stop slicing at specific slice" << endl;
+	cout << "  -d --writeDebug    : debug mode (creates scad files for each inset error)" << endl;
+	cout << endl;
+	cout << "It is pitch black. You are likely to be eaten by a grue." << endl;
+}
+
+void exitUsage() {
+	usage();
+	exit(0);
+}
 
 void parseArgs(Configuration &config,
 				int argc,
@@ -81,14 +135,12 @@ void parseArgs(Configuration &config,
 
 	//first get the config parameter and parse the file so that other params can override the
 	//config
-	clpp::command_line_parameters_parser configparser;
-	configparser.add_parameter("-c", "--config", &config, &Configuration::readFromFile)
-			.default_value("miracle.config").necessary();
-	configparser.parse(argc, argv);
-
-
-	//get the rest of the parameters
 	clpp::command_line_parameters_parser parser;
+
+	parser.add_parameter("-h", "--help", &exitUsage);
+
+	parser.add_parameter("-c", "--config", &config, &Configuration::readFromFile)
+	    .default_value("miracle.config");
 
 	ConfigSetter f(config, "slicer", "firstLayerZ");
 	parser.add_parameter("-f", "--firstLayerZ", &f, &ConfigSetter::set_d);
@@ -109,7 +161,7 @@ void parseArgs(Configuration &config,
 	parser.add_parameter("-s", "--nbOfShells", &s, &ConfigSetter::set_d);
 
 	ConfigSetter d(config, "slicer", "writeDebugScadFiles");
-	parser.add_parameter("-d", "--writeDebugScadFiles", &d, &ConfigSetter::set_b);
+	parser.add_parameter("-d", "--writeDebug", &d, &ConfigSetter::set_b);
 
 	ConfigSetter n(config, "slicer", "firstSliceIdx");
 	parser.add_parameter("-n", "--firstSliceIdx", &n, &ConfigSetter::set_i);
@@ -120,6 +172,25 @@ void parseArgs(Configuration &config,
 	parser.add_parameter("-m", "--lastSliceIdx", &m, &ConfigSetter::set_i);
 
 	lastSliceIdx = config["slicer"]["lastSliceIdx"].asInt();
+
+	try {
+		parser.parse(argc - 1, argv);
+	}
+	catch (std::exception &exp) {
+		usage();
+		throw mgl::Exception(exp.what());
+	}
+	catch (mgl::Exception &exp) {
+		usage();
+		throw exp;
+	}
+
+	//handle the unnamed parameter separately
+	modelFile = argv[argc  - 1];
+	if (!boost::filesystem::is_regular_file(modelFile)) {
+		usage();
+		throw mgl::Exception(("Invalid model file [" + modelFile + "]").c_str());
+	}
 }
 
 
@@ -135,25 +206,7 @@ int preConditionsOrShowUsage(int argc, char *argv[])
 
 	if (argc < 2)
 	{
-		cout << endl;
-		cout << endl;
-		cout << "This program translates a 3d model file in STL format to GCODE toolpath for a 3D printer "<< endl;
-		cout << "It also generates an OpenScad file for visualization"<< endl;
-		cout << endl;
-		cout << "usage: miracle-grue [OPTIONS] STL FILE" << endl;
-		cout << "options: " << endl;
-		cout << "  c=file.config : set the configuration file (default is local miracle.config)" << endl;
-		cout << "  f=height : override the first layer height" << endl;
-		cout << "  l=height : override the layer height" << endl;
-		cout << "  w=height : override layer width" << endl;
-		cout << "  t=width : override the infill grid width" << endl;
-		cout << "  a=angle : override the infill grid inter slice angle (radians)" << endl;
-		cout << "  s=shells : override the number of shells" << endl;
-		cout << "  n=first slice nb : slice from a specific slice" << endl;
-		cout << "  m=last slice nb : stop slicing at specific slice" << endl;
-		cout << "  -d : debug mode (creates scad files for each inset error)" << endl;
-		cout << endl;
-		cout << "It is pitch black. You are likely to be eaten by a grue." << endl;
+		usage();
 		return (-1);
 	}
 	return 0;
