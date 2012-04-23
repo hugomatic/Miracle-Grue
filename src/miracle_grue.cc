@@ -48,12 +48,12 @@ public:
 		config[section.c_str()][name.c_str()] = val;
 		cout << section + "." + name + " = " + val << endl;
 	};
-	void set_d(float &val) {
+	void set_d(float val) {
 		config[section.c_str()][name.c_str()] = val;
 		cout << section + "." + name + " = ";
 		cout << val << endl;
 	};
-	void set_i(int &val) {
+	void set_i(int val) {
 		config[section.c_str()][name.c_str()] = val;
 		cout << section + "." + name + " = ";
 		cout << val << endl;
