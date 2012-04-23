@@ -174,7 +174,7 @@ debug_libs_path = ["", ]
 
 p = env.Program('./bin/miracle_grue', 
 		mix(['src/miracle_grue.cc'] ),
-		LIBS = ['mgl', '_json'],
+		LIBS = ['mgl', '_json', 'boost_system', 'boost_filesystem', 'boost_regex'],
 		LIBPATH = default_libs_path,
 		CPPPATH = default_includes)
 
