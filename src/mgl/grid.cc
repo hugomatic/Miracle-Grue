@@ -10,8 +10,10 @@
 */
 
 #include <set>
+#include <map>
 
 #include "grid.h"
+#include <limits.h>
 
 using namespace mgl;
 using namespace std;
@@ -165,13 +167,83 @@ void castRaysOnSliceAlongY(const SegmentTable &outlineLoops,
 	}
 }
 
+typedef vector<Vector2*> PointList;
+typedef PointList::iterator PointIter;
+
 void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ranges along x, multiple per lines
 								const std::vector<Scalar> &values, // the y values for each line
 								Polygons &polygons)				   // the output
 {
+
+	map<Vector2*, LineSegment2*> points_to_segs;
+	PointList points_remaining;
+
+	//Convert ray ranges to segments and map endpoints
+	SegmentTable gridsegs;
+	for (size_t i = 0; i < rays.size(); i++) {
+		const vector<ScalarRange> &ray = rays[i];
+
+		if(ray.size() == 0)
+			continue;
+		
+		Scalar yval = values[i];
+
+		for (vector<ScalarRange>::const_iterator j = ray.begin();
+			 j != ray.end(); i++) {
+
+			gridsegs.push_back(LineSegment2(Vector2(j->min, yval),
+											Vector2(j->max, yval)));
+
+			LineSegment2 &seg = gridsegs.back();
+			points_to_segs[&(seg.a)] = &seg;
+			points_to_segs[&(seg.b)] = &seg;
+			points_remaining.push_back(&(seg.a));
+			points_remaining.push_back(&(seg.b));
+		}
+	}
+
+	PointIter end_i = points_remaining.begin();
+	while(points_remaining.size()) {
+		Vector2 *endpoint = *end_i;
+		points_remaining.erase(end_i);
+
+		PointIter closest;
+		int closest_dist == INT_MAX;
+
+		//find the remaining point closest to this point
+		for (PointIter close_i = points_remaining.begin();
+			 close_i != points_remaining.end(); close_i++) {
+
+			dist = LineSegment2(&endpoint, **close_i).squaredLength();
+			if (dist < closest_dist) {
+				closest = close_i;
+				closest_dist = dist;
+			}
+		}
+
+		//find the segment this point corresponds to
+		LineSegment2 *next_seg = points_to_segs[*closest];
+
+		polygons.push_back(Polygon());
+		Polygon &poly = polygons.back();
+
+		//reverse it if we're pointing to its end
+		if (&(next_seg->b) == *closest) {
+			poly.push_back(next_seg->b);
+			poly.push_back(next_seg->a);
+		}
+		else {
+			poly.push_back(next_seg->a);
+			poly.push_back(next_seg->b);
+		}
+	}
+		
+			
+
+
 	// change direction of extrusion
 	// for each line
-	bool forward = false;
+	/*	bool forward = false;
 	assert(rays.size() == values.size());
 
 	for(size_t rayId =0; rayId < rays.size(); rayId++)
@@ -210,7 +282,7 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 			poly.push_back(begin);
 			poly.push_back(end);
 		}
-	}
+		}*/
 }
 
 void polygonsFromScalarRangesAlongY( const ScalarRangeTable &rays,	   // the ranges along x, multiple per lines
