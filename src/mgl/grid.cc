@@ -179,7 +179,7 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 	PointList points_remaining;
 
 	//Convert ray ranges to segments and map endpoints
-	SegmentTable gridsegs;
+	vector<LineSegment2> gridsegs;
 	for (size_t i = 0; i < rays.size(); i++) {
 		const vector<ScalarRange> &ray = rays[i];
 
@@ -208,13 +208,13 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 		points_remaining.erase(end_i);
 
 		PointIter closest;
-		int closest_dist == INT_MAX;
+		Scalar closest_dist = INT_MAX;
 
 		//find the remaining point closest to this point
 		for (PointIter close_i = points_remaining.begin();
 			 close_i != points_remaining.end(); close_i++) {
 
-			dist = LineSegment2(&endpoint, **close_i).squaredLength();
+			Scalar dist = LineSegment2(*endpoint, **close_i).squaredLength();
 			if (dist < closest_dist) {
 				closest = close_i;
 				closest_dist = dist;
