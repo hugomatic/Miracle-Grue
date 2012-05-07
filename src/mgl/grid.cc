@@ -167,7 +167,7 @@ void castRaysOnSliceAlongY(const SegmentTable &outlineLoops,
 	}
 }
 
-typedef vector<Vector2*> PointList;
+typedef List<Vector2*> PointList;
 typedef PointList::iterator PointIter;
 
 void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ranges along x, multiple per lines
