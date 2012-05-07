@@ -189,7 +189,7 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 		Scalar yval = values[i];
 
 		for (vector<ScalarRange>::const_iterator j = ray.begin();
-			 j != ray.end(); i++) {
+			 j != ray.end(); j++) {
 
 			gridsegs.push_back(LineSegment2(Vector2(j->min, yval),
 											Vector2(j->max, yval)));
