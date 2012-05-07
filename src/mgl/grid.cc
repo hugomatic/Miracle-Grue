@@ -168,19 +168,18 @@ void castRaysOnSliceAlongY(const SegmentTable &outlineLoops,
 	}
 }
 
-typedef list<Vector2*> PointList;
-typedef PointList::iterator PointIter;
+typedef map<Vector2*, Vector2*> PointMap;
+typedef PointMap::iterator PointIter;
 
 void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ranges along x, multiple per lines
 								const std::vector<Scalar> &values, // the y values for each line
 								Polygons &polygons)				   // the output
 {
 
-	map<Vector2*, LineSegment2*> points_to_segs;
-	PointList points_remaining;
+	PointMap points_remaining;
 
 	//Convert ray ranges to segments and map endpoints
-	vector<LineSegment2> gridsegs;
+	vector<Vector2> points;
 	for (size_t i = 0; i < rays.size(); i++) {
 		const vector<ScalarRange> &ray = rays[i];
 
@@ -192,60 +191,64 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 		for (vector<ScalarRange>::const_iterator j = ray.begin();
 			 j != ray.end(); j++) {
 
-			gridsegs.push_back(LineSegment2(Vector2(j->min, yval),
-											Vector2(j->max, yval)));
+			assert(j->min != j->max);
 
-			LineSegment2 &seg = gridsegs.back();
-			points_to_segs[&(seg.a)] = &seg;
-			points_to_segs[&(seg.b)] = &seg;
-			points_remaining.push_back(&(seg.a));
-			PointIter a_iter = points_remaining.end();
-			points_in_list[&(seg.a)] = a_iter;
-			points_remaining.push_back(&(seg.b));
-			PointIter b_iter = points_remaining.end();
-			points_in_list[&(seg.b)] = b_iter;
+			points.push_back(Vector2(j->min, yval));
+			Vector2 &a = points.back();
+			points.push_back(Vector2(j->max, yval));
+			Vector2 &b = points.back();
+			
+			points_remaining[&a] = &b;
+			points_remaining[&b] = &a;
 		}
 	}
 
-	PointIter end_i = points_remaining.begin();
+	Vector2 *endpoint = points_remaining.begin()->first;
 	while(!points_remaining.empty()) {
-		Vector2 *endpoint = *end_i;
-		//points_remaining.erase(end_i);
+		points_remaining.erase(endpoint);
 
-		PointIter closest;
+		//handle last point
+		if (points_remaining.empty()) break;
+
 		Scalar closest_dist = INT_MAX;
+		Vector2 *closest;
 
 		//find the remaining point closest to this point
 		for (PointIter close_i = points_remaining.begin();
 			 close_i != points_remaining.end(); close_i++) {
 
-			Scalar dist = LineSegment2(*endpoint, **close_i).squaredLength();
+			Vector2 *close = close_i->first;
+
+			Scalar dist = LineSegment2(*endpoint, *close).squaredLength();
+
+			if (dist > 0) {
+				cout << "close points" << endl << "endpoint" << endl;
+				cout << "\tp: " << endpoint << endl;
+				cout << "\tx: " << endpoint->x << endl;
+				cout << "\ty: " << endpoint->y << endl;
+				cout << "close" << endl;
+				cout << "\tp: " << close << endl;
+				cout << "\tx: " << close->x << endl;
+				cout << "\ty: " << close->y << endl;
+				
+				assert(0);
+			}
+
 			if (dist < closest_dist) {
-				closest = close_i;
+				closest = close;
 				closest_dist = dist;
 			}
 		}
 
-		//find the segment this point corresponds to
-		LineSegment2 *next_seg = points_to_segs[*closest];
 
 		polygons.push_back(Polygon());
 		Polygon &poly = polygons.back();
 
-		//reverse it if we're pointing to its end
-		if (&(next_seg->b) == *closest) {
-			poly.push_back(next_seg->b);
-			poly.push_back(next_seg->a);
-			end_i = points_in_list[&(next_seg->a)];
-		}
-		else {
-			poly.push_back(next_seg->a);
-			poly.push_back(next_seg->b);
-			end_i = points_in_list[&(next_seg->b)];
-		}
+		poly.push_back(*closest);
+		poly.push_back(*(points_remaining[closest]));
+		endpoint = points_remaining[closest];
+		points_remaining.erase(closest);
 	}
-		
-			
 
 
 	// change direction of extrusion
