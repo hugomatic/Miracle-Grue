@@ -14,6 +14,7 @@
 
 #include "grid.h"
 #include <limits.h>
+#include <list>
 
 using namespace mgl;
 using namespace std;
@@ -167,7 +168,7 @@ void castRaysOnSliceAlongY(const SegmentTable &outlineLoops,
 	}
 }
 
-typedef List<Vector2*> PointList;
+typedef list<Vector2*> PointList;
 typedef PointList::iterator PointIter;
 
 void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ranges along x, multiple per lines
@@ -198,14 +199,18 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 			points_to_segs[&(seg.a)] = &seg;
 			points_to_segs[&(seg.b)] = &seg;
 			points_remaining.push_back(&(seg.a));
+			PointIter a_iter = points_remaining.end();
+			points_in_list[&(seg.a)] = a_iter;
 			points_remaining.push_back(&(seg.b));
+			PointIter b_iter = points_remaining.end();
+			points_in_list[&(seg.b)] = b_iter;
 		}
 	}
 
 	PointIter end_i = points_remaining.begin();
-	while(points_remaining.size()) {
+	while(!points_remaining.empty()) {
 		Vector2 *endpoint = *end_i;
-		points_remaining.erase(end_i);
+		//points_remaining.erase(end_i);
 
 		PointIter closest;
 		Scalar closest_dist = INT_MAX;
@@ -231,10 +236,12 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 		if (&(next_seg->b) == *closest) {
 			poly.push_back(next_seg->b);
 			poly.push_back(next_seg->a);
+			end_i = points_in_list[&(next_seg->a)];
 		}
 		else {
 			poly.push_back(next_seg->a);
 			poly.push_back(next_seg->b);
+			end_i = points_in_list[&(next_seg->b)];
 		}
 	}
 		
