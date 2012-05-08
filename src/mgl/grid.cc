@@ -168,7 +168,7 @@ void castRaysOnSliceAlongY(const SegmentTable &outlineLoops,
 	}
 }
 
-typedef map<Vector2*, Vector2*> PointMap;
+typedef map<int, int> PointMap;
 typedef PointMap::iterator PointIter;
 
 void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ranges along x, multiple per lines
@@ -194,16 +194,14 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 			assert(j->min != j->max);
 
 			points.push_back(Vector2(j->min, yval));
-			Vector2 &a = points.back();
 			points.push_back(Vector2(j->max, yval));
-			Vector2 &b = points.back();
 			
-			points_remaining[&a] = &b;
-			points_remaining[&b] = &a;
+			points_remaining[points.size() - 2] = points.size() - 1;
+			points_remaining[points.size() - 1] = points.size() - 2;
 		}
 	}
 
-	Vector2 *endpoint = points_remaining.begin()->first;
+	int endpoint = points_remaining.begin()->first;
 	while(!points_remaining.empty()) {
 		points_remaining.erase(endpoint);
 
@@ -211,25 +209,26 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 		if (points_remaining.empty()) break;
 
 		Scalar closest_dist = INT_MAX;
-		Vector2 *closest;
+		int closest;
 
 		//find the remaining point closest to this point
 		for (PointIter close_i = points_remaining.begin();
 			 close_i != points_remaining.end(); close_i++) {
+			
+			int close = close_i->first;
 
-			Vector2 *close = close_i->first;
+			Scalar dist = LineSegment2(points[endpoint], points[close])
+				            .squaredLength();
 
-			Scalar dist = LineSegment2(*endpoint, *close).squaredLength();
-
-			if (dist > 0) {
+			if (dist == 0) {
 				cout << "close points" << endl << "endpoint" << endl;
 				cout << "\tp: " << endpoint << endl;
-				cout << "\tx: " << endpoint->x << endl;
-				cout << "\ty: " << endpoint->y << endl;
+				cout << "\tx: " << points[endpoint].x << endl;
+				cout << "\ty: " << points[endpoint].y << endl;
 				cout << "close" << endl;
 				cout << "\tp: " << close << endl;
-				cout << "\tx: " << close->x << endl;
-				cout << "\ty: " << close->y << endl;
+				cout << "\tx: " << points[close].x << endl;
+				cout << "\ty: " << points[close].y << endl;
 				
 				assert(0);
 			}
@@ -244,8 +243,9 @@ void polygonsFromScalarRangesAlongX( const ScalarRangeTable &rays,	   // the ran
 		polygons.push_back(Polygon());
 		Polygon &poly = polygons.back();
 
-		poly.push_back(*closest);
-		poly.push_back(*(points_remaining[closest]));
+		int connected = points_remaining[closest];
+		poly.push_back(points[closest]);
+		poly.push_back(points[connected]);
 		endpoint = points_remaining[closest];
 		points_remaining.erase(closest);
 	}
