@@ -87,7 +87,8 @@ struct Extruder
 		nozzleZ(0),
 		zFeedRate(100),
 		extrusionMode(VOLUMETRIC_MODE),
-		feedDiameter(3)
+		feedDiameter(3),
+		code('A')
 	{}
 
 	typedef enum {RPM_MODE, VOLUMETRIC_MODE} extrusionMode_t; 
@@ -101,6 +102,7 @@ struct Extruder
 	double zFeedRate;
 	extrusionMode_t extrusionMode;
 	double feedDiameter;
+	char code;
 
 	std::string firstLayerExtrusionProfile;
 	std::string insetsExtrusionProfile;
@@ -115,7 +117,7 @@ struct Gantry
 {
 
 	//unsigned int nb;
-	double x,y,z,feed;     // current position and feed
+	double x,y,z,e,feed;     // current position and feed
 	std::string comment;   // if I'm not useful by xmas please delete me
 
 public:
@@ -158,8 +160,8 @@ public:
 			bool doFeed);
 
 public:
-	void squirt(std::ostream &ss, const libthing::Vector2 &lineStart, double reversalFeedrate, double reversalExtrusionSpeed,  double extrusionSpeed);
-	void snort(std::ostream &ss, const libthing::Vector2 &lineEnd, double reversalFeedrate, double reversalExtrusionSpeed);
+	void squirt(std::ostream &ss, const libthing::Vector2 &lineStart, Extruder extruder, Extrusion extrusion);
+	void snort(std::ostream &ss, const libthing::Vector2 &lineEnd, const Extruder &extruder, const Extrusion &extrusion);
 
     void writeSwitchExtruder(std::ostream& ss, int extruderId);
 

@@ -248,28 +248,29 @@ void GCoder::writeAnchor(std::ostream &ss)
 
 void GCoder::writePolygon(	std::ostream & ss,
 							double z,
+							const Extruder &extruder,
 							const Extrusion &extrusion,
 							const Polygon & polygon)
 {
     Vector2 start(0, 0), stop(0, 0);
 
-    polygonLeadInAndLeadOut(polygon, extrusion.leadIn, extrusion.leadOut, start, stop);
+    polygonLeadInAndLeadOut(polygon, extruder, extrusion.leadIn, extrusion.leadOut, start, stop);
 
     // rapid move into position
-    gcoderCfg.gantry.g1(ss, start.x, start.y, z, gcoderCfg.gantry.rapidMoveFeedRateXY, NULL);
+    gcoderCfg.gantry.g1(ss, start.x, start.y, z, extruder, extrusion, gcoderCfg.gantry.rapidMoveFeedRateXY, NULL);
 
     // start extruding ahead of time while moving towards the first point
-    gcoderCfg.gantry.squirt(ss, polygon[0], extrusion.squirtFeedrate, extrusion.squirtFlow, extrusion.flow);
+    gcoderCfg.gantry.squirt(ss, polygon[0], extruder, extrusion);
 
    // for all other points in the polygon
     for(size_t i=1; i < polygon.size(); i++)
 	{
     	// move towards the point
 		const Vector2 &p = polygon[i];
-		gcoderCfg.gantry.g1(ss, p.x, p.y, z, extrusion.feedrate, NULL);
+		gcoderCfg.gantry.g1(ss, p.x, p.y, z, extruder, extrusion, NULL);
 	}
     //ss << "(STOP!)" << endl;
-    gcoderCfg.gantry.snort(ss, stop, extrusion.snortFeedrate, extrusion.snortFlow);
+    gcoderCfg.gantry.snort(ss, stop, extruder, extrusion);
     //ss << "(!STOP)" << endl;
     ss << endl;
 
@@ -504,13 +505,14 @@ void GCoder::writeSlice(ostream& ss, const SliceData& sliceData )
 
 
 
-void Gantry::g1(std::ostream &ss, double x, double y, double z, double feed, const char *comment = NULL)
+void Gantry::g1(Extruder &extruder, Extrusion &extrusion, std::ostream &ss, double x double y, double z, double feed, const char *comment = NULL)
 {
 
 	bool doX = true;
 	bool doY = true;
 	bool doZ = true;
 	bool doFeed = true;
+	bool doE = false;
 
 	if(!libthing::tequals(this->x, x, SAMESAME_TOL))
 	{
@@ -530,7 +532,13 @@ void Gantry::g1(std::ostream &ss, double x, double y, double z, double feed, con
 		doFeed=true;
 	}
 
-	g1Motion(ss, x,y,z,feed,comment,doX,doY,doZ,doFeed);
+	if(extruding && extruder.isVolumetric()) {
+		doE = true;
+		e = volumetricE(extruder, extrusion, x, y, z);
+	}		
+
+	g1Motion(ss, x, y, z, e, extruder.code, feed, comment,
+			 doX, doY, doZ, doFeed, doE);
 }
 
 void Gantry::squirt(std::ostream &ss, const Vector2 &lineStart,
@@ -556,14 +564,14 @@ void Gantry::snort(std::ostream &ss, const Vector2 &lineEnd, double reversalFeed
 
 
 
-void Gantry::g1Motion(std::ostream &ss, double x, double y, double z,
-								double feed, const char *g1Comment,
-								bool doX, bool doY, bool doZ, bool doFeed)
+void Gantry::g1Motion(std::ostream &ss, double x, double y, double z, double e,
+					  char ab, double feed, const char *g1Comment, bool doX,
+					  bool doY, bool doZ, bool doFeed, bool doE)
 {
 
 	// not do something is not an option .. under certain conditions
 	#ifdef STRONG_CHECKING
-	if( !(doX || doY || doZ || doFeed)   )
+	if( !(doX || doY || doZ || doFeed )   )
 	{
 		stringstream ss;
 		ss << "G1 without moving where x=" << x << ", y=" << y << ", z=" << z << ", feed=" << feed ;
@@ -593,6 +601,7 @@ void Gantry::g1Motion(std::ostream &ss, double x, double y, double z,
 	if(doY) ss << " Y" << y;
 	if(doZ) ss << " Z" << z;
 	if(doFeed) ss << " F" << feed;
+	if(doE) ss << ab << e;
 	if(g1Comment) ss << " (" << g1Comment << ")";
 	ss << endl;
 
@@ -602,6 +611,7 @@ void Gantry::g1Motion(std::ostream &ss, double x, double y, double z,
 	this->x = x;
 	this->y = y;
 	this->z = z;
+	this->e = e;
 	this->feed = feed;
 
 	if(g1Comment == NULL)
