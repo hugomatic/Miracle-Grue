@@ -503,9 +503,47 @@ void GCoder::writeSlice(ostream& ss, const SliceData& sliceData )
 	}
 }
 
+Scalar Extrusion::crossSectionArea(Scalar height) {
+	Scalar width = height / extrudedDimensionsRatio;
 
+	//two semicircles joined by a rectangle
+	radius = height / 2;
+	return (M_TAU / 2) * radius * radius + height * (width - height);
+	//LONG LIVE TAU!
+}
 
-void Gantry::g1(Extruder &extruder, Extrusion &extrusion, std::ostream &ss, double x double y, double z, double feed, const char *comment = NULL)
+Scalar Extruder::feedCrossSectionArea() {
+	radius = feedDiameter / 2;
+	//feedstock should be a cylinder
+	return (M_TAU / 2) * radius * radius;
+	//LONG LIVE TAU!
+}
+
+Scalar Gantry::segmentVolume(const Extruder &extruder,
+							 const Extrusion &extrusion,
+							 const LineSegment2 &segment) {
+	Scalar cross_area = extrusion.crossSectionArea(extruder.nozzleZ);
+	Scalar length = segment.length();
+
+	return cross_area * length;
+}
+	
+
+Scalar Gantry::volumetricE(const Extruder &extruder, const Extruder &extrusion,
+						   Scalar x, Scalar y, Scalar z) {
+	LineSegment2(Vector2(this->x, this->y), Vector2(x, y)) segment;
+	segment_volume = segmentVolume(extruder, extrusion, segment);
+
+	feed_cross_area = extruder.feedCrossSectionArea();
+
+	feed_len = segment_volume / feed_cross_area;
+
+	return feed_len;
+}
+
+void Gantry::g1(Extruder &extruder, Extrusion &extrusion, std::ostream &ss,
+				double x, double y, double z, double feed,
+				const char *comment = NULL)
 {
 
 	bool doX = true;
