@@ -61,6 +61,8 @@ struct Extrusion
 		squirtFeedrate(600)
 	{}
 
+	Scalar crossSectionArea(Scalar height) const;
+
 	double feedrate;
 
 	double retractDistance;
@@ -81,6 +83,8 @@ struct Extrusion
 
 struct Extruder
 {
+	typedef enum {RPM_MODE, VOLUMETRIC_MODE} extrusionMode_t; 
+
 	Extruder()
 		:coordinateSystemOffsetX(0),
 		extrusionTemperature(220),
@@ -91,7 +95,9 @@ struct Extruder
 		code('A')
 	{}
 
-	typedef enum {RPM_MODE, VOLUMETRIC_MODE} extrusionMode_t; 
+	Scalar feedCrossSectionArea() const;
+	bool isVolumetric() const { return  extrusionMode == VOLUMETRIC_MODE; };
+
 
 	double coordinateSystemOffsetX;  // the distance along X between the machine 0 position and the extruder tip
 	double extrusionTemperature; 	 // the extrusion temperature in Celsius
@@ -127,6 +133,7 @@ public:
 
 	bool xyMaxHoming;
 	bool zMaxHoming;
+	bool extruding;
 	double scalingFactor;
 
 
@@ -149,30 +156,63 @@ public:
 public:
 	// emits a g1 command
 	void g1Motion(std::ostream &ss,
-			double x,
-			double y,
-			double z,
-			double feed,
-			const char *comment,
-			bool doX,
-			bool doY,
-			bool doZ,
-			bool doFeed);
+				  double x,
+				  double y,
+				  double z,
+				  double e,
+				  char ab,
+				  double feed,
+				  const char *comment,
+				  bool doX,
+				  bool doY,
+				  bool doZ,
+				  bool doE,
+				  bool doFeed);
 
 public:
-	void squirt(std::ostream &ss, const libthing::Vector2 &lineStart, Extruder extruder, Extrusion extrusion);
-	void snort(std::ostream &ss, const libthing::Vector2 &lineEnd, const Extruder &extruder, const Extrusion &extrusion);
+	void squirt(std::ostream &ss, const libthing::Vector2 &lineStart,
+				Extruder extruder, Extrusion extrusion);
+	void snort(std::ostream &ss, const libthing::Vector2 &lineEnd,
+			   const Extruder &extruder, const Extrusion &extrusion);
 
     void writeSwitchExtruder(std::ostream& ss, int extruderId);
 
 	// emits a g1 command to the stream, only writing the parameters that have changed since the last g1.
 	void g1(std::ostream &ss,
+			const Extruder *extruder,
+			const Extrusion *extrusion,
 			double x,
 			double y,
 			double z,
 			double feed,
 			const char *comment);
 
+	//overloaded methods to make interface simpler
+	void g1(std::ostream &ss,
+			double x,
+			double y,
+			double z,
+			double feed,
+			const char *comment) {
+		g1(ss, NULL, NULL, x, y, z, feed, comment);
+	};
+
+	void g1(std::ostream &ss,
+			const Extruder &extruder,
+			const Extrusion &extrusion,
+			double x,
+			double y,
+			double z,
+			double feed,
+			const char *comment) {
+		g1(ss, &extruder, &extrusion, x, y, z, feed, comment);
+	};
+
+	Scalar volumetricE(const Extruder &extruder, const Extrusion &extrusion,
+					   Scalar x, Scalar y, Scalar z) const;
+
+	Scalar segmentVolume(const Extruder &extruder, const Extrusion &extrusion,
+						 libthing::LineSegment2 &segment) const;
 };
 
 
@@ -282,12 +322,14 @@ private:
     void writeAnchor(std::ostream & ss);
     void writePolygons(	std::ostream& ss,
 						double z,
-						const Extrusion &extrusionParams,
+						const Extruder &extruder,
+						const Extrusion &extrusion,
 						const Polygons &paths);
 
     void writePolygon(	std::ostream & ss,
 						double z,
-						const Extrusion &extrusionParams,
+						const Extruder &extruder,
+						const Extrusion &extrusion,
 						const Polygon & polygon);
 
     void writeWipeExtruder(std::ostream& ss, int extruderId) const;
