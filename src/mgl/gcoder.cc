@@ -158,6 +158,15 @@ void GCoder::writeHomingSequence(std::ostream &ss)
 	int extruderCount = gcoderCfg.extruders.size();
 	if (extruderCount >0)
 	{
+		ss << "G92 A0" << endl;
+		if (extruderCount > 1) {
+			ss << "G92 B0" << endl;
+		}
+
+		gcoderCfg.gantry.a = 0;
+		gcoderCfg.gantry.b = 0;
+		gcoderCfg.gantry.extruding = false;
+
 		gcoderCfg.gantry.g1(ss, gcoderCfg.platform.waitingPositionX,
 							gcoderCfg.platform.waitingPositionY,
 							gcoderCfg.platform.waitingPositionZ,
@@ -315,7 +324,7 @@ void GCoder::moveZ(ostream & ss, double z, unsigned int  extruderId, double zFee
     bool doY = false;
     bool doZ = true;
     bool doFeed = true;
-	bool doE = true;
+	bool doE = false;
     const char *comment = NULL;
 
     gcoderCfg.gantry.g1Motion(ss, 0, 0, z, 0, zFeedrate, "move Z", doX, doY, doZ, doFeed, doE);
