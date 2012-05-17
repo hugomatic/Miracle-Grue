@@ -9,7 +9,7 @@ QT       += core
 TARGET = bin/miracle_grue
 TEMPLATE = app
 
-
+CONFIG += debug
 
 MGL_SRC = src/mgl
 include($$MGL_SRC/mgl.pro.inc)
