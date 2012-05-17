@@ -171,7 +171,7 @@ public:
 
 public:
 	void squirt(std::ostream &ss, const libthing::Vector2 &lineStart,
-				Extruder extruder, Extrusion extrusion);
+				const Extruder &extruder, const Extrusion &extrusion);
 	void snort(std::ostream &ss, const libthing::Vector2 &lineEnd,
 			   const Extruder &extruder, const Extrusion &extrusion);
 

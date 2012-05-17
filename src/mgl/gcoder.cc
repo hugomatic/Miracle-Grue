@@ -596,20 +596,20 @@ void Gantry::g1(std::ostream &ss,
 void Gantry::squirt(std::ostream &ss, const Vector2 &lineStart,
 					const Extruder &extruder, const Extrusion &extrusion)
 {
-
-	ss << "M108 R" <<  reversalFlow << " (squirt)" << endl;
+	ss << "M108 R" <<  extrusion.squirtFlow << " (squirt)" << endl;
 	ss << "M101" << endl;
 	g1(ss, extruder, extrusion,
-	   lineStart.x, lineStart.y, z, reversalFeedrate, NULL);
-	ss << "M108 R" << extrusionFlow << " (good to go)" << endl;
+	   lineStart.x, lineStart.y, z, extrusion.squirtFeedrate, NULL);
+	ss << "M108 R" << extrusion.flow << " (good to go)" << endl;
 }
 
 void Gantry::snort(std::ostream &ss, const Vector2 &lineEnd,
-				   const Extruder &extruder, const Extrusion &extrusion,
+				   const Extruder &extruder, const Extrusion &extrusion)
 {
-	ss << "M108 R" << reversalExtrusionSpeed << "  (snort)" << endl;
+	ss << "M108 R" << extrusion.snortFlow << "  (snort)" << endl;
 	ss << "M102" << endl;
-	g1(ss, extruder, extrusion, lineEnd.x, lineEnd.y, z, reversalFeedrate, NULL);
+	g1(ss, extruder, extrusion, lineEnd.x, lineEnd.y, z,
+	   extrusion.snortFeedrate, NULL);
 	ss << "M103" << endl;
 }
 
