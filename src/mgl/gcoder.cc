@@ -46,6 +46,12 @@ void polygonLeadInAndLeadOut(const Polygon &polygon, const Extruder &extruder,
 	const Vector2 &c = polygon[count-2];
 	const Vector2 &d = polygon[count-1]; // last element
 
+	if (extruder.isVolumetric()) {
+		start = a;
+		end = d;
+		return;
+	}
+
 	Vector2 ab = b - a;
 	ab.normalise();
 	Vector2 cd = d-c;
