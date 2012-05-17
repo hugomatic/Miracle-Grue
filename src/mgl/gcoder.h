@@ -132,6 +132,7 @@ public:
 	double rapidMoveFeedRateXY;
 	double rapidMoveFeedRateZ;
 	double homingFeedRateZ;
+	double layerH;
 
 	bool xyMaxHoming;
 	bool zMaxHoming;
@@ -149,7 +150,8 @@ public:
              scalingFactor(1),
              xyMaxHoming(true),
              zMaxHoming(false),
-             homingFeedRateZ(100)
+		     homingFeedRateZ(100),
+        	 layerH(.27)
 	{
 
 	}

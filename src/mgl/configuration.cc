@@ -150,6 +150,8 @@ void mgl::loadGCoderConfigFromFile(const Configuration& conf, GCoderConfig &gcod
 	gcoderCfg.gantry.rapidMoveFeedRateXY = doubleCheck(conf.root["gantry"]["rapidMoveFeedRateXY"], "gantry.rapidMoveFeedRateXY");
 	gcoderCfg.gantry.rapidMoveFeedRateZ = doubleCheck(conf.root["gantry"]["rapidMoveFeedRateZ"], "gantry.rapidMoveFeedRateZ");
 	gcoderCfg.gantry.homingFeedRateZ = doubleCheck(conf.root["gantry"]["homingFeedRateZ"], "gantry.homingFeedRateZ");
+	gcoderCfg.gantry.layerH = doubleCheck(conf.root["slicer"]["layerH"], "slicer.layerH");
+
 
 	gcoderCfg.platform.temperature = doubleCheck(conf.root["platform"]["temperature"], "platform.temperature");
 	gcoderCfg.platform.automated   = boolCheck(conf.root["platform"]["automated"], "platform.automated");

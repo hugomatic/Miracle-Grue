@@ -323,11 +323,11 @@ void GCoder::moveZ(ostream & ss, double z, unsigned int  extruderId, double zFee
     bool doX = false;
     bool doY = false;
     bool doZ = true;
-    bool doFeed = true;
 	bool doE = false;
+    bool doFeed = true;
     const char *comment = NULL;
 
-    gcoderCfg.gantry.g1Motion(ss, 0, 0, z, 0, zFeedrate, "move Z", doX, doY, doZ, doFeed, doE);
+    gcoderCfg.gantry.g1Motion(ss, 0, 0, z, 0, zFeedrate, "move Z", doX, doY, doZ, doE, doFeed);
 
 }
 
@@ -540,7 +540,7 @@ Scalar Extruder::feedCrossSectionArea()  const {
 Scalar Gantry::segmentVolume(const Extruder &extruder,
 							 const Extrusion &extrusion,
 							 LineSegment2 &segment) const {
-	Scalar cross_area = extrusion.crossSectionArea(extruder.nozzleZ);
+	Scalar cross_area = extrusion.crossSectionArea(layerH);
 	Scalar length = segment.length();
 
 	return cross_area * length;
