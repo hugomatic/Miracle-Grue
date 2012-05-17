@@ -522,7 +522,7 @@ void GCoder::writeSlice(ostream& ss, const SliceData& sliceData )
 }
 
 Scalar Extrusion::crossSectionArea(Scalar height) const {
-	Scalar width = height / extrudedDimensionsRatio;
+	Scalar width = height * extrudedDimensionsRatio;
 
 	//two semicircles joined by a rectangle
 	Scalar radius = height / 2;
