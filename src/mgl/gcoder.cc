@@ -599,7 +599,10 @@ void Gantry::squirt(std::ostream &ss, const Vector2 &lineStart,
 					const Extruder &extruder, const Extrusion &extrusion)
 {
 	if (extruder.isVolumetric()) {
-
+		g1Motion(ss, x, y, z,
+				 getCurrentE() + extrusion.retractDistance
+				 + extrusion.restartExtraDistance, extrusion.retractRate,
+				 "squirt", false, false, false, true, true); //only E and F
 	}
 	else {
 		ss << "M108 R" <<  extrusion.squirtFlow << " (squirt)" << endl;
@@ -608,13 +611,18 @@ void Gantry::squirt(std::ostream &ss, const Vector2 &lineStart,
 		   lineStart.x, lineStart.y, z, extrusion.squirtFeedrate, NULL);
 		ss << "M108 R" << extrusion.flow << " (good to go)" << endl;
 	}
+
+	extruding = true;
 }
 
 void Gantry::snort(std::ostream &ss, const Vector2 &lineEnd,
 				   const Extruder &extruder, const Extrusion &extrusion)
 {
 	if (extruder.isVolumetric()) {
-
+		g1Motion(ss, x, y, z,
+				 getCurrentE() - extrusion.retractDistance,
+				 extrusion.retractRate, "snort",
+				 false, false, false, true, true); //only E and F
 	}
 	else {
 		ss << "M108 R" << extrusion.snortFlow << "  (snort)" << endl;
@@ -623,6 +631,8 @@ void Gantry::snort(std::ostream &ss, const Vector2 &lineEnd,
 		   extrusion.snortFeedrate, NULL);
 		ss << "M103" << endl;
 	}
+
+	extruding = false;
 }
 
 
@@ -672,11 +682,11 @@ void Gantry::g1Motion(std::ostream &ss, double x, double y, double z, double e,
 	// if(feed >= 5000) assert(0);
 
 	// update state machine
-	this->x = x;
-	this->y = y;
-	this->z = z;
-	this->feed = feed;
-	setCurrentE(e);
+	if (doX) this->x = x;
+	if (doY) this->y = y;
+	if (doZ) this->z = z;
+	if (doFeed) this->feed = feed;
+	if (doE) setCurrentE(e);
 
 	if(g1Comment == NULL)
 	{
