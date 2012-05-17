@@ -59,11 +59,12 @@ void polygonLeadInAndLeadOut(const Polygon &polygon, const Extruder &extruder,
 }
 
 
-void Gantry::writeSwitchExtruder(ostream& ss, int extruderId)
+void Gantry::writeSwitchExtruder(ostream& ss, Extruder &extruder)
 {
-	ss << "( extruder " << extruderId << " )" << endl;
-	ss << "( GSWITCH T" << extruderId << " )" << endl;
+	ss << "( extruder " << extruder.id << " )" << endl;
+	ss << "( GSWITCH T" << extruder.id << " )" << endl;
 	ss << "( TODO: add offset management to Gantry )" << endl;
+	ab = extruder.code;
 	ss << endl;
 }
 
@@ -317,7 +318,7 @@ void GCoder::moveZ(ostream & ss, double z, unsigned int  extruderId, double zFee
 	bool doE = true;
     const char *comment = NULL;
 
-    gcoderCfg.gantry.g1Motion(ss, 0, 0, z, 0, zFeedrate, 'A', "move Z", doX, doY, doZ, doFeed, doE);
+    gcoderCfg.gantry.g1Motion(ss, 0, 0, z, 0, zFeedrate, "move Z", doX, doY, doZ, doFeed, doE);
 
 }
 
@@ -431,7 +432,7 @@ void GCoder::writeSlice(ostream& ss, const SliceData& sliceData )
 		{
 			if (extruderCount > 0)
 			{
-				gcoderCfg.gantry.writeSwitchExtruder(ss, extruderId);
+				gcoderCfg.gantry.writeSwitchExtruder(ss, extruder);
 			}
 			if(gcoderCfg.gcoding.infills && gcoderCfg.gcoding.infillFirst)
 			{
@@ -549,7 +550,7 @@ Scalar Gantry::volumetricE(const Extruder &extruder, const Extrusion &extrusion,
 
 	Scalar feed_len = seg_volume / feed_cross_area;
 
-	return feed_len;
+	return feed_len + getCurrentE();
 }
 
 /*if extruder and extrusion are null we don't extrude*/
@@ -564,6 +565,7 @@ void Gantry::g1(std::ostream &ss,
 	bool doZ = true;
 	bool doFeed = true;
 	bool doE = false;
+	Scalar e = getCurrentE();
 
 	if(!libthing::tequals(this->x, x, SAMESAME_TOL))
 	{
@@ -589,35 +591,45 @@ void Gantry::g1(std::ostream &ss,
 		e = volumetricE(*extruder, *extrusion, x, y, z);
 	}		
 
-	g1Motion(ss, x, y, z, e, extruder->code, feed, comment,
+	g1Motion(ss, x, y, z, e, feed, comment,
 			 doX, doY, doZ, doE, doFeed);
 }
 
 void Gantry::squirt(std::ostream &ss, const Vector2 &lineStart,
 					const Extruder &extruder, const Extrusion &extrusion)
 {
-	ss << "M108 R" <<  extrusion.squirtFlow << " (squirt)" << endl;
-	ss << "M101" << endl;
-	g1(ss, extruder, extrusion,
-	   lineStart.x, lineStart.y, z, extrusion.squirtFeedrate, NULL);
-	ss << "M108 R" << extrusion.flow << " (good to go)" << endl;
+	if (extruder.isVolumetric()) {
+
+	}
+	else {
+		ss << "M108 R" <<  extrusion.squirtFlow << " (squirt)" << endl;
+		ss << "M101" << endl;
+		g1(ss, extruder, extrusion,
+		   lineStart.x, lineStart.y, z, extrusion.squirtFeedrate, NULL);
+		ss << "M108 R" << extrusion.flow << " (good to go)" << endl;
+	}
 }
 
 void Gantry::snort(std::ostream &ss, const Vector2 &lineEnd,
 				   const Extruder &extruder, const Extrusion &extrusion)
 {
-	ss << "M108 R" << extrusion.snortFlow << "  (snort)" << endl;
-	ss << "M102" << endl;
-	g1(ss, extruder, extrusion, lineEnd.x, lineEnd.y, z,
-	   extrusion.snortFeedrate, NULL);
-	ss << "M103" << endl;
+	if (extruder.isVolumetric()) {
+
+	}
+	else {
+		ss << "M108 R" << extrusion.snortFlow << "  (snort)" << endl;
+		ss << "M102" << endl;
+		g1(ss, extruder, extrusion, lineEnd.x, lineEnd.y, z,
+		   extrusion.snortFeedrate, NULL);
+		ss << "M103" << endl;
+	}
 }
 
 
 
 
 void Gantry::g1Motion(std::ostream &ss, double x, double y, double z, double e,
-					  char ab, double feed, const char *g1Comment, bool doX,
+					  double feed, const char *g1Comment, bool doX,
 					  bool doY, bool doZ, bool doE, bool doFeed)
 {
 
@@ -663,8 +675,8 @@ void Gantry::g1Motion(std::ostream &ss, double x, double y, double z, double e,
 	this->x = x;
 	this->y = y;
 	this->z = z;
-	this->e = e;
 	this->feed = feed;
+	setCurrentE(e);
 
 	if(g1Comment == NULL)
 	{

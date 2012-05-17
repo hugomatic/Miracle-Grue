@@ -92,6 +92,7 @@ struct Extruder
 		zFeedRate(100),
 		extrusionMode(VOLUMETRIC_MODE),
 		feedDiameter(3),
+		id(0),
 		code('A')
 	{}
 
@@ -109,6 +110,7 @@ struct Extruder
 	extrusionMode_t extrusionMode;
 	double feedDiameter;
 	char code;
+	int id;
 
 	std::string firstLayerExtrusionProfile;
 	std::string insetsExtrusionProfile;
@@ -123,7 +125,7 @@ struct Gantry
 {
 
 	//unsigned int nb;
-	double x,y,z,e,feed;     // current position and feed
+	double x,y,z,a,b,feed;     // current position and feed
 	std::string comment;   // if I'm not useful by xmas please delete me
 
 public:
@@ -135,6 +137,7 @@ public:
 	bool zMaxHoming;
 	bool extruding;
 	double scalingFactor;
+	char ab;
 
 
 	Gantry()
@@ -160,7 +163,6 @@ public:
 				  double y,
 				  double z,
 				  double e,
-				  char ab,
 				  double feed,
 				  const char *comment,
 				  bool doX,
@@ -175,7 +177,7 @@ public:
 	void snort(std::ostream &ss, const libthing::Vector2 &lineEnd,
 			   const Extruder &extruder, const Extrusion &extrusion);
 
-    void writeSwitchExtruder(std::ostream& ss, int extruderId);
+    void writeSwitchExtruder(std::ostream& ss, Extruder &extruder);
 
 	// emits a g1 command to the stream, only writing the parameters that have changed since the last g1.
 	void g1(std::ostream &ss,
@@ -213,6 +215,9 @@ public:
 
 	Scalar segmentVolume(const Extruder &extruder, const Extrusion &extrusion,
 						 libthing::LineSegment2 &segment) const;
+
+	Scalar getCurrentE() const { if (ab == 'A') return a; else return b; };
+	void setCurrentE(Scalar e) { if (ab == 'A') a = e; else b = e; };
 };
 
 

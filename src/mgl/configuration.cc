@@ -191,6 +191,9 @@ void mgl::loadGCoderConfigFromFile(const Configuration& conf, GCoderConfig &gcod
 		extruder.insetsExtrusionProfile = stringCheck(value["insetsExtrusionProfile"], (prefix+"insetsExtrusionProfile").c_str() );
 		extruder.infillsExtrusionProfile = stringCheck(value["infillsExtrusionProfile"], (prefix+"infillsExtrusionProfile").c_str() );
 
+		extruder.id = i;
+		extruder.code = 'A' + i;
+
 		string extrusionMode = stringCheck(value["extrusionMode"], (prefix+"extrusionMode").c_str());
 		if ( extrusionMode == "rpm") {
 			extruder.extrusionMode = Extruder::RPM_MODE;
