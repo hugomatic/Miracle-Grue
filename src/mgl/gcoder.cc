@@ -277,7 +277,8 @@ void GCoder::writePolygon(	std::ostream & ss,
     // rapid move into position
     gcoderCfg.gantry.g1(ss, extruder, extrusion,
 						start.x, start.y, z,
-						gcoderCfg.gantry.rapidMoveFeedRateXY, NULL);
+						gcoderCfg.gantry.rapidMoveFeedRateXY,
+						"move into position");
 
     // start extruding ahead of time while moving towards the first point
     gcoderCfg.gantry.squirt(ss, polygon[0], extruder, extrusion);
